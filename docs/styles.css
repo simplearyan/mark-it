@@ -258,9 +258,25 @@ footer {
   .hero h1 { font-size: 3rem; }
   .playground-wrap { border-radius: 0; }
   #demo-canvas { height: 350px; }
+  
   .hero div[style*="display: flex"] {
     flex-direction: column;
     width: 100%;
     padding: 0 20px;
+    gap: 12px;
+  }
+
+  .playground-toolbar {
+    padding: 8px 12px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tool-btn, .weight-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 }

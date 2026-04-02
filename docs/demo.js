@@ -77,7 +77,10 @@
     }
 
     function handleDown(e) {
-        if (!rc) return;
+        if (!rc || activePointerId !== null) return;
+        activePointerId = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
+
         isDrawing = true;
         const pos = getLocalCoords(e);
         
@@ -96,7 +99,7 @@
     }
 
     function handleMove(e) {
-        if (!isDrawing || !rc) return;
+        if (!isDrawing || !rc || e.pointerId !== activePointerId) return;
         const pos = getLocalCoords(e);
         
         if (currentTool === 'eraser') {
@@ -112,13 +115,17 @@
         }
     }
 
-    function handleUp() {
-        if (isDrawing && tempElement) {
+    function handleUp(e) {
+        if (isDrawing && tempElement && e.pointerId === activePointerId) {
             elements.push(tempElement);
             tempElement = null;
             redraw();
         }
-        isDrawing = false;
+        if (e.pointerId === activePointerId) {
+            isDrawing = false;
+            activePointerId = null;
+            canvas.releasePointerCapture(e.pointerId);
+        }
     }
 
     function redraw() {

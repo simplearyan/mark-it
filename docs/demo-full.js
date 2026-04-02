@@ -37,6 +37,7 @@
     
     canvas = document.createElement('canvas');
     canvas.className = 'iitm-whiteboard-canvas';
+    canvas.style.touchAction = 'none'; // 🚩 Crucial for mobile drawing
     overlay.appendChild(canvas);
     
     createToolbar();
@@ -46,6 +47,7 @@
     rc = rough.canvas(canvas);
 
     window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 300));
     resizeCanvas();
 
     // Universal Pointer Events (Touch, Mouse, Pen)
