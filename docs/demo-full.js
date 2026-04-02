@@ -87,6 +87,7 @@
         <button class="iitm-tool-btn" data-tool="ellipse" title="Circle"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle></svg></button>
         <button class="iitm-tool-btn" data-tool="triangle" title="Triangle"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3z"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="graph" title="Graph (X/Y Axis)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v18m-9-9h18"></path><path d="M17 7l5 5-5 5m-10-10l-5 5 5 5"></path></svg></button>
+        <button class="iitm-tool-btn" data-tool="arrow" title="Arrow"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m-4-4l4 4-4 4"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="eraser" title="Eraser"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"></path><path d="M17 17L7 7"></path></svg></button>
       </div>
       <div class="iitm-divider"></div>
@@ -153,12 +154,12 @@
   }
 
   function showClearConfirm() {
-    const popover = document.getElementById('iitm-clear-popover');
-    popover.classList.add('active');
+    const popover = toolbar.querySelector('#iitm-clear-popover');
+    if (popover) popover.classList.add('active');
   }
 
   function hideClearConfirm() {
-    const popover = document.getElementById('iitm-clear-popover');
+    const popover = toolbar.querySelector('#iitm-clear-popover');
     if (popover) popover.classList.remove('active');
   }
 
@@ -271,25 +272,58 @@
       // Main Axes
       rc.line(p1[0], midY, p2[0], midY, opts); // X
       rc.line(midX, p1[1], midX, p2[1], opts); // Y
+    } else if (el.type === 'arrow') {
+      const [p1, p2] = el.points;
+      rc.line(p1[0], p1[1], p2[0], p2[1], opts);
+      const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
+      const headSize = Math.max(10, el.strokeWidth * 3);
+      const x1 = p2[0] - headSize * Math.cos(angle - Math.PI / 6);
+      const y1 = p2[1] - headSize * Math.sin(angle - Math.PI / 6);
+      const x2 = p2[0] - headSize * Math.cos(angle + Math.PI / 6);
+      const y2 = p2[1] - headSize * Math.sin(angle + Math.PI / 6);
+      rc.line(p2[0], p2[1], x1, y1, opts);
+      rc.line(p2[0], p2[1], x2, y2, opts);
     }
+  }
+
+  function distToSegment(p, a, b) {
+    const l2 = Math.hypot(b[0] - a[0], b[1] - a[1]) ** 2;
+    if (l2 === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+    let t = ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p[0] - (a[0] + t * (b[0] - a[0])), p[1] - (a[1] + t * (b[1] - a[1])));
   }
 
   function eraseAt(pos) {
     elements = elements.filter(el => {
-       if (el.type === 'pen') return !el.points.some(p => Math.hypot(p[0] - pos.x, p[1] - pos.y) < 15);
+       if (el.type === 'pen') return !el.points.some(p => Math.hypot(p[0] - pos.x, p[1] - pos.y) < 12);
        
-       // Precise Bounding Box for Shapes
        const [p1, p2] = el.points;
+       const p = [pos.x, pos.y];
+
+       if (el.type === 'line' || el.type === 'arrow') {
+         return distToSegment(p, p1, p2) > 12;
+       } else if (el.type === 'rectangle') {
+         const minX = Math.min(p1[0], p2[0]), maxX = Math.max(p1[0], p2[0]);
+         const minY = Math.min(p1[1], p2[1]), maxY = Math.max(p1[1], p2[1]);
+         const d1 = distToSegment(p, [minX, minY], [maxX, minY]);
+         const d2 = distToSegment(p, [maxX, minY], [maxX, maxY]);
+         const d3 = distToSegment(p, [maxX, maxY], [minX, maxY]);
+         const d4 = distToSegment(p, [minX, maxY], [minX, minY]);
+         return Math.min(d1, d2, d3, d4) > 12;
+       } else if (el.type === 'graph') {
+         const midX = (p1[0] + p2[0]) / 2, midY = (p1[1] + p2[1]) / 2;
+         const d1 = distToSegment(p, [p1[0], midY], [p2[0], midY]);
+         const d2 = distToSegment(p, [midX, p1[1]], [midX, p2[1]]);
+         return Math.min(d1, d2) > 12;
+       }
+
+       // Fallback for Ellipses/Triangles
        const minX = Math.min(p1[0], p2[0]), maxX = Math.max(p1[0], p2[0]);
        const minY = Math.min(p1[1], p2[1]), maxY = Math.max(p1[1], p2[1]);
-       
-       // Check proximity to any of the 4 bounds for a shape-border match
-       const distToEdge = Math.min(
-         Math.abs(pos.x - minX), Math.abs(pos.x - maxX),
-         Math.abs(pos.y - minY), Math.abs(pos.y - maxY)
-       );
-       
-       return distToEdge > 10; // 🚩 Precision threshold
+       const distToEdge = Math.min(Math.abs(pos.x - minX), Math.abs(pos.x - maxX), Math.abs(pos.y - minY), Math.abs(pos.y - maxY));
+       const isInside = pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY;
+       return !(isInside && distToEdge < 15);
     });
     redraw(); saveAnnotations();
   }

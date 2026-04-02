@@ -166,20 +166,60 @@
             const midY = (p1[1] + p2[1]) / 2;
             rc.line(p1[0], midY, p2[0], midY, opts); // X
             rc.line(midX, p1[1], midX, p2[1], opts); // Y
+        } else if (el.type === 'arrow') {
+            const [p1, p2] = el.points;
+            rc.line(p1[0], p1[1], p2[0], p2[1], opts);
+            // Arrow Head Logic
+            const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
+            const headSize = Math.max(10, el.strokeWidth * 3);
+            const x1 = p2[0] - headSize * Math.cos(angle - Math.PI / 6);
+            const y1 = p2[1] - headSize * Math.sin(angle - Math.PI / 6);
+            const x2 = p2[0] - headSize * Math.cos(angle + Math.PI / 6);
+            const y2 = p2[1] - headSize * Math.sin(angle + Math.PI / 6);
+            rc.line(p2[0], p2[1], x1, y1, opts);
+            rc.line(p2[0], p2[1], x2, y2, opts);
         }
+    }
+
+    function distToSegment(p, a, b) {
+        const l2 = Math.hypot(b[0] - a[0], b[1] - a[1]) ** 2;
+        if (l2 === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+        let t = ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(p[0] - (a[0] + t * (b[0] - a[0])), p[1] - (a[1] + t * (b[1] - a[1])));
     }
 
     function eraseAt(pos) {
         elements = elements.filter(el => {
-            if (el.type === 'pen') return !el.points.some(p => Math.hypot(p[0] - pos.x, p[1] - pos.y) < 15);
+            if (el.type === 'pen') return !el.points.some(p => Math.hypot(p[0] - pos.x, p[1] - pos.y) < 12);
+            
+            // 🚩 SURGICAL ERASER: Check proximity to the actual lines/borders of the shape
             const [p1, p2] = el.points;
+            
+            if (el.type === 'line' || el.type === 'arrow') {
+                return distToSegment([pos.x, pos.y], p1, p2) > 12;
+            } else if (el.type === 'rectangle') {
+                const minX = Math.min(p1[0], p2[0]), maxX = Math.max(p1[0], p2[0]);
+                const minY = Math.min(p1[1], p2[1]), maxY = Math.max(p1[1], p2[1]);
+                const d1 = distToSegment([pos.x, pos.y], [minX, minY], [maxX, minY]);
+                const d2 = distToSegment([pos.x, pos.y], [maxX, minY], [maxX, maxY]);
+                const d3 = distToSegment([pos.x, pos.y], [maxX, maxY], [minX, maxY]);
+                const d4 = distToSegment([pos.x, pos.y], [minX, maxY], [minX, minY]);
+                return Math.min(d1, d2, d3, d4) > 12;
+            } else if (el.type === 'graph') {
+                const midX = (p1[0] + p2[0]) / 2, midY = (p1[1] + p2[1]) / 2;
+                const d1 = distToSegment([pos.x, pos.y], [p1[0], midY], [p2[0], midY]);
+                const d2 = distToSegment([pos.x, pos.y], [midX, p1[1]], [midX, p2[1]]);
+                return Math.min(d1, d2) > 12;
+            }
+            
+            // Proximity Fallback for Ellipses/Triangles
             const minX = Math.min(p1[0], p2[0]), maxX = Math.max(p1[0], p2[0]);
             const minY = Math.min(p1[1], p2[1]), maxY = Math.max(p1[1], p2[1]);
-            const distToEdge = Math.min(
-                Math.abs(pos.x - minX), Math.abs(pos.x - maxX),
-                Math.abs(pos.y - minY), Math.abs(pos.y - maxY)
-            );
-            return distToEdge > 10;
+            const distToEdge = Math.min(Math.abs(pos.x - minX), Math.abs(pos.x - maxX), Math.abs(pos.y - minY), Math.abs(pos.y - maxY));
+            const isInside = pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY;
+            
+            return !(isInside && distToEdge < 15);
         });
         redraw();
     }
