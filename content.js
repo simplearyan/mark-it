@@ -1,23 +1,22 @@
 /**
- * IITM Annotation Extension - Content Script (V8 PIXEL ACCURACY)
- * (Synchronized Scaling Engine, Local Space Resolver, and SPA Reflow)
+ * IITM Annotation Extension - Content Script (V9 Minimalist)
+ * (Universal Cursor Tool, Custom Confirmation UI, and Zero Clutter)
  */
 
 (function() {
   let isEnabled = false;
-  let isMinimized = false;
   let isDrawing = false;
-  let currentTool = 'pen';
+  let currentTool = 'cursor'; // 🚩 THE DEFAULT: Safe Cursor Mode
   let currentColor = '#4f46e5';
   let currentWeight = 5;
   let elements = [];
   let tempElement = null;
 
-  let overlay, canvas, ctx, rc;
+  let overlay, canvas, ctx, rc, toolbar;
 
   // ── 1. Initialization ──────────────────────────────────────────────────────
   function init() {
-    console.log("IITM Annotator: Initializing V8 (Pixel Accuracy)...");
+    console.log("IITM Annotator: Initializing V9 (Minimalist)...");
     
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.onMessage.addListener((request) => {
@@ -41,7 +40,6 @@
     });
     observer.observe(document.body, { childList: true, subtree: false });
 
-    // Watch for Dynamic Page Growth (e.g. infinite scroll, read more)
     if (typeof ResizeObserver !== 'undefined') {
       const resizeOb = new ResizeObserver(() => {
          if (isEnabled && canvas) resizeCanvas();
@@ -90,8 +88,6 @@
       overlay.classList.remove('hidden');
       toolbar.classList.remove('hidden');
       if (fab) fab.classList.remove('hidden');
-      
-      // Delay slightly for SPA layout settling
       setTimeout(resizeCanvas, 100); 
     } else {
       if (overlay) overlay.classList.add('hidden');
@@ -123,20 +119,18 @@
     canvas.onpointerout = handleUp;
   }
 
-  let toolbar;
   function createToolbar() {
     if (toolbar) return;
     toolbar = document.createElement('div');
     toolbar.className = 'iitm-annotation-toolbar hidden';
     toolbar.innerHTML = `
       <div class="iitm-toolbar-group">
-        <button class="iitm-tool-btn active" data-tool="pen" title="Pen"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.5 1.5M7.5 9l-1.5 1.5"></path></svg></button>
+        <button class="iitm-tool-btn active" data-tool="cursor" title="Pointer (Select)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg></button>
+        <button class="iitm-tool-btn" data-tool="pen" title="Pen"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.5 1.5M7.5 9l-1.5 1.5"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="line" title="Line"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></button>
-        <button class="iitm-tool-btn" data-tool="arrow" title="Arrow"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14m-7-7l7 7-7 7"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="rectangle" title="Rectangle"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg></button>
         <button class="iitm-tool-btn" data-tool="ellipse" title="Circle"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle></svg></button>
         <button class="iitm-tool-btn" data-tool="triangle" title="Triangle"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3z"></path></svg></button>
-        <button class="iitm-tool-btn" data-tool="graph" title="Graph"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M12 3v18"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="eraser" title="Eraser"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"></path><path d="M17 17L7 7"></path></svg></button>
       </div>
       <div class="iitm-divider"></div>
@@ -155,37 +149,63 @@
       </div>
       <div class="iitm-divider"></div>
       <div class="iitm-toolbar-group">
-        <button class="iitm-tool-btn" data-tool="minimize" title="Minimize UI"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14"></path></svg></button>
-        <button class="iitm-tool-btn" data-tool="clear" title="Clear All"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-        <button class="iitm-tool-btn" data-tool="close" title="Disable Overlay"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+        <button class="iitm-tool-btn" id="iitm-clear-trigger" title="Clear All"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        <button class="iitm-tool-btn" data-tool="close" title="Close"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
+      </div>
+
+      <!-- 🚩 CUSTOM MINIMAL CONFIRMATION POPOVER -->
+      <div class="iitm-confirm-popover" id="iitm-clear-popover">
+        <div class="iitm-confirm-title">Clear all annotations?</div>
+        <div class="iitm-confirm-footer">
+          <button class="iitm-confirm-btn iitm-confirm-cancel" id="iitm-clear-no">Cancel</button>
+          <button class="iitm-confirm-btn iitm-confirm-yes" id="iitm-clear-yes">Yes, Clear</button>
+        </div>
       </div>
     `;
 
     toolbar.onclick = (e) => {
-      const btn = e.target.closest('button');
-      if (!btn) return;
-      if (isMinimized) { minimizeToolbar(); return; }
-      if (btn.dataset.tool) {
-        const tool = btn.dataset.tool;
+      const toolBtn = e.target.closest('[data-tool]');
+      const colorBtn = e.target.closest('[data-color]');
+      const weightBtn = e.target.closest('[data-weight]');
+      const clearBtn = e.target.closest('#iitm-clear-trigger');
+
+      if (toolBtn) {
+        const tool = toolBtn.dataset.tool;
         if (tool === 'close') toggleWhiteboard();
-        else if (tool === 'minimize') minimizeToolbar();
-        else if (tool === 'clear') { if (confirm("Clear all annotations?")) { elements = []; saveAnnotations(); redraw(); } }
         else setTool(tool);
-      } else if (btn.dataset.color) setColor(btn.dataset.color);
-      else if (btn.dataset.weight) setWeight(parseInt(btn.dataset.weight));
+      } else if (colorBtn) {
+        setColor(colorBtn.dataset.color);
+      } else if (weightBtn) {
+        setWeight(parseInt(weightBtn.dataset.weight));
+      } else if (clearBtn) {
+        showClearConfirm();
+      }
+    };
+
+    // Confirm Logic
+    toolbar.querySelector('#iitm-clear-no').onclick = hideClearConfirm;
+    toolbar.querySelector('#iitm-clear-yes').onclick = () => {
+      elements = []; saveAnnotations(); redraw(); hideClearConfirm();
     };
 
     document.body.appendChild(toolbar);
   }
 
-  function minimizeToolbar() {
-    isMinimized = !isMinimized;
-    toolbar.classList.toggle('minimized', isMinimized);
+  function showClearConfirm() {
+    const popover = document.getElementById('iitm-clear-popover');
+    popover.classList.add('active');
+  }
+
+  function hideClearConfirm() {
+    const popover = document.getElementById('iitm-clear-popover');
+    if (popover) popover.classList.remove('active');
   }
 
   function setTool(tool) {
     currentTool = tool;
     toolbar.querySelectorAll('[data-tool]').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
+    // Reset Canvas cursor
+    canvas.style.cursor = tool === 'cursor' ? 'default' : (tool === 'eraser' ? 'crosshair' : 'crosshair');
   }
 
   function setColor(color) {
@@ -200,51 +220,31 @@
 
   function resizeCanvas() {
     if (!canvas || !overlay) return;
+    const fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight);
+    const fullWidth = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth, window.innerWidth);
     
-    // 🚩 ACCURACY FIX: Get the full height of the document
-    const fullHeight = Math.max(
-      document.body.scrollHeight, 
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight
-    );
-    const fullWidth = Math.max(
-      document.body.scrollWidth,
-      document.documentElement.scrollWidth,
-      window.innerWidth
-    );
-    
-    // 🚩 PIXEL-PERFECT SYNC: Set pixel dimensions for BOTH container and canvas
     if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
-       // Set CSS size of the container
        overlay.style.width = fullWidth + 'px';
        overlay.style.height = fullHeight + 'px';
-       
-       // Set coordinate resolution of the canvas
        canvas.width = fullWidth;
        canvas.height = fullHeight;
-       
        redraw();
-       console.log("IITM Annotator: Re-scaled to", fullWidth, "x", fullHeight);
     }
   }
 
-  // ── 2. Drawing Logic ───────────────────────────────────────────────────────
-  /**
-   * 🚩 THE LOCAL RESOLVER
-   * Calculates mapping relative strictly to the Canvas element.
-   * On long pages, rect.top will be negative if scrolled, correctly compensating.
-   */
   function getLocalCoords(e) {
     const rect = canvas.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
+  /**
+   * ── 2. Drawing Logic ───────────────────────────────────────────────────────
+   */
   function handleDown(e) {
     if (!isEnabled) return;
+    // 🚩 CURSOR SAFETY GUARD: No drawing in pointer mode
+    if (currentTool === 'cursor') return;
+    
     if (e.target.closest('.iitm-annotation-toolbar') || e.target.closest('.iitm-toggle-fab')) return;
 
     isDrawing = true;
@@ -272,7 +272,6 @@
     } else {
       tempElement.points = [tempElement.points[0], [pos.x, pos.y]];
     }
-    
     redraw();
     drawElement(tempElement);
   }
@@ -281,7 +280,6 @@
     if (isDrawing && tempElement) {
       elements.push(tempElement);
       tempElement = null;
-      isDrawing = false;
       saveAnnotations();
       redraw();
     }
@@ -309,29 +307,15 @@
     } else if (el.type === 'ellipse') {
       const [p1, p2] = el.points;
       rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
-    } else if (el.type === 'arrow') {
-      const [[x1, y1], [x2, y2]] = el.points;
-      rc.line(x1, y1, x2, y2, opts);
-      const angle = Math.atan2(y2 - y1, x2 - x1);
-      const head = 15;
-      rc.line(x2, y2, x2 - head * Math.cos(angle - Math.PI / 6), y2 - head * Math.sin(angle - Math.PI / 6), opts);
-      rc.line(x2, y2, x2 - head * Math.cos(angle + Math.PI / 6), y2 - head * Math.sin(angle + Math.PI / 6), opts);
     } else if (el.type === 'triangle') {
       const [p1, p2] = el.points;
       const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
       const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
       rc.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
-    } else if (el.type === 'graph') {
-      const [p1, p2] = el.points;
-      const xMid = p1[0] + (p2[0] - p1[0]) / 2;
-      const yMid = p1[1] + (p2[1] - p1[1]) / 2;
-      rc.line(xMid, Math.min(p1[1], p2[1]), xMid, Math.max(p1[1], p2[1]), opts);
-      rc.line(Math.min(p1[0], p2[0]), yMid, Math.max(p1[0], p2[0]), yMid, opts);
     }
   }
 
   function eraseAt(pos) {
-    const originalLen = elements.length;
     elements = elements.filter(el => {
        if (el.type === 'pen') return !el.points.some(p => Math.hypot(p[0] - pos.x, p[1] - pos.y) < 25);
        const [p1, p2] = el.points;
@@ -339,15 +323,14 @@
        const minY = Math.min(p1[1], p2[1]) - 20, maxY = Math.max(p1[1], p2[1]) + 20;
        return !(pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY);
     });
-    if (elements.length !== originalLen) { redraw(); saveAnnotations(); }
+    redraw(); saveAnnotations();
   }
 
-  // ── 3. Persistence Logic ───────────────────────────────────────────────────
   function saveAnnotations() {
     const key = `iitm_anno_${window.location.pathname}${window.location.search}`;
     const data = {}; data[key] = elements;
     if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set(data, () => console.log("Saved V8 PIXEL ACCURACY:", elements.length));
+        chrome.storage.local.set(data, () => console.log("Saved V9 (Minimalist):", elements.length));
     }
   }
 
