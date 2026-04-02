@@ -198,10 +198,10 @@
   }
   
   .iitm-toggle-fab {
-    width: 56px;
-    height: 56px;
-    bottom: 20px;
-    right: 20px;
+    width: 48px; 
+    height: 48px;
+    bottom: 30vh !important;  /* 🚩 Forced High for Tablets */
+    right: 2vw !important;
   }
 }
 
@@ -229,10 +229,10 @@
   }
   
   .iitm-toggle-fab {
-    width: 48px;
-    height: 48px;
-    bottom: 15px;
-    right: 15px;
+    width: 42px; 
+    height: 42px;
+    bottom: 30vh !important;  /* 🚩 Forced Center-Screen for Phones */
+    right: 2vw !important;
   }
 }
 
