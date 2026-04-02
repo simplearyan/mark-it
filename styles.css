@@ -1,34 +1,36 @@
-/* IITM Annotation Extension Styles (V4 Advanced SPA Support) */
+/* IITM Annotation Extension Styles (V6 Final Accuracy Fix) */
 
 :root {
   --iitm-primary: #4f46e5;
   --iitm-accent: #6366f1;
   --bg-blur: rgba(255, 255, 255, 0.9);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  /* Absolute Max Z-Index layers to ensure clickable UI */
-  --z-overlay: 2147483646;
-  --z-toolbar: 2147483647;
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  /* Z-Index layers: Max Priority */
+  --z-overlay: 2147483646; 
+  --z-toolbar: 2147483647; /* Highest */
 }
 
+/* 🚩 THE VIEWPORT FIX: Switch Absolute (Document) back to Fixed (Viewport) */
 .iitm-whiteboard-overlay {
-  position: fixed;
+  position: fixed; 
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
   z-index: var(--z-overlay);
-  pointer-events: none; /* Container is passive */
+  pointer-events: none;
   touch-action: none;
+  background: transparent;
 }
 
 .iitm-whiteboard-canvas {
   width: 100%;
   height: 100%;
   display: block;
-  pointer-events: auto; /* Only canvas catches drawing */
+  pointer-events: auto; /* Catch drawing */
 }
 
-/* Floating Toolbar V4 */
+/* Floating Toolbar (Fixed to Viewport) */
 .iitm-annotation-toolbar {
   position: fixed;
   bottom: 30px;
@@ -40,11 +42,11 @@
   padding: 12px 24px;
   border-radius: 30px;
   border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-xl);
   display: flex;
   align-items: center;
   gap: 16px;
-  z-index: var(--z-toolbar); /* Always on top! */
+  z-index: var(--z-toolbar);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   pointer-events: auto;
 }
@@ -111,7 +113,7 @@
   margin: 0 10px;
 }
 
-/* Minimize State V4: High Visibility Dot */
+/* Minimize State V6 (Fixed Toggle) */
 .iitm-annotation-toolbar.minimized {
   width: 64px;
   height: 64px;
@@ -125,7 +127,6 @@
   background: var(--iitm-primary);
   color: white;
   border: 3px solid white;
-  box-shadow: 0 10px 25px rgba(79, 70, 229, 0.5);
 }
 
 .iitm-annotation-toolbar.minimized .iitm-toolbar-group,
@@ -143,7 +144,7 @@
   font-size: 26px;
 }
 
-/* FAB Toggle V4 */
+/* FAB Toggle (Fixed to Viewport) */
 .iitm-toggle-fab {
   position: fixed;
   bottom: 30px;
@@ -165,7 +166,6 @@
 
 .iitm-toggle-fab:hover {
   transform: scale(1.1) rotate(15deg);
-  box-shadow: 0 20px 45px rgba(79, 70, 229, 0.5);
 }
 
 .hidden {
