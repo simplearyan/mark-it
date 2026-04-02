@@ -90,27 +90,57 @@ body {
 
 .playground-toolbar {
   background: #f1f5f9;
-  padding: 12px 20px;
+  padding: 8px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
+  flex-wrap: wrap;
 }
 
-.tool-btn {
-  padding: 8px 16px;
-  border-radius: 12px;
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #cbd5e1;
+  margin: 0 4px;
+}
+
+.tool-btn, .weight-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--text-600);
   font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.tool-btn.active {
+.tool-btn.active, .weight-btn.active {
   background: var(--indigo-600);
   color: white;
+}
+
+.color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-dot.active {
+  border-color: #cbd5e1;
+  transform: scale(1.15);
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 #demo-canvas {
@@ -211,8 +241,26 @@ footer {
   box-shadow: 0 15px 30px rgba(79, 70, 229, 0.4);
 }
 
+.cta-btn.cta-secondary {
+  background: white;
+  color: var(--indigo-600);
+  border: 2px solid var(--indigo-600);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03);
+}
+
+.cta-btn.cta-secondary:hover {
+  background: #f1f5f9;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.06);
+}
+
 @media (max-width: 768px) {
   .hero h1 { font-size: 3rem; }
   .playground-wrap { border-radius: 0; }
   #demo-canvas { height: 350px; }
+  .hero div[style*="display: flex"] {
+    flex-direction: column;
+    width: 100%;
+    padding: 0 20px;
+  }
 }

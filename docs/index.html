@@ -27,20 +27,36 @@
         
         <div class="playground-wrap">
             <div class="playground-toolbar">
-                <button class="tool-btn active" data-tool="pen">Pen</button>
-                <button class="tool-btn" data-tool="line">Line</button>
-                <button class="tool-btn" data-tool="rectangle">Rectangle</button>
-                <button class="tool-btn" data-tool="ellipse">Circle</button>
-                <button class="tool-btn" data-tool="eraser">Eraser</button>
+                <div class="tool-group">
+                    <button class="tool-btn active" data-tool="pen">Pen</button>
+                    <button class="tool-btn" data-tool="line">Line</button>
+                    <button class="tool-btn" data-tool="rectangle">Rect</button>
+                    <button class="tool-btn" data-tool="ellipse">Circle</button>
+                    <button class="tool-btn" data-tool="eraser">Eraser</button>
+                </div>
+                <div class="divider"></div>
+                <div class="tool-group">
+                    <button class="color-dot active" style="background: #4f46e5" data-color="#4f46e5"></button>
+                    <button class="color-dot" style="background: #10b981" data-color="#10b981"></button>
+                    <button class="color-dot" style="background: #ef4444" data-color="#ef4444"></button>
+                </div>
+                <div class="divider"></div>
+                <div class="tool-group">
+                    <button class="weight-btn" data-weight="2">Fine</button>
+                    <button class="weight-btn active" data-weight="5">Mid</button>
+                </div>
                 <div style="flex: 1"></div>
-                <button class="tool-btn" id="clear-btn" style="color: #ef4444">Clear All</button>
+                <button class="tool-btn" id="clear-btn" style="color: #ef4444">Clear</button>
             </div>
             <!-- Interactive Playground -->
             <canvas id="demo-canvas"></canvas>
             <div style="position: absolute; bottom: 12px; right: 20px; color: #94a3b8; font-size: 12px; font-weight: 500; pointer-events: none;">Try drawing here! 👆</div>
         </div>
 
-        <a href="https://github.com/simplearyan/mark-it" class="cta-btn">View on GitHub</a>
+        <div style="display: flex; gap: 16px; justify-content: center; margin-bottom: 80px;">
+            <a href="demo.html" class="cta-btn cta-secondary">🖥️ Open Full-Screen Studio</a>
+            <a href="https://github.com/simplearyan/mark-it" class="cta-btn">📂 View Source on GitHub</a>
+        </div>
     </section>
 
     <!-- 🚩 FEATURES -->

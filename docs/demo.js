@@ -1,23 +1,20 @@
-/* Markit Landing Demo Logic (V1.1.0 Robust Release) */
-
 (function() {
     const canvas = document.getElementById('demo-canvas');
     const ctx = canvas.getContext('2d');
     let rc = null;
     let isDrawing = false;
     let currentTool = 'pen';
+    let currentColor = '#4f46e5';
+    let currentWeight = 5;
     let elements = [];
     let tempElement = null;
 
     function init() {
         console.log("Markit Demo: Initializing...");
         
-        // 🚩 Check for RoughJS with multiple attempts
         if (typeof rough !== 'undefined') {
             rc = rough.canvas(canvas);
-            console.log("Markit Demo: RoughJS Loaded.");
         } else {
-            console.error("Markit Demo: RoughJS not found. Retrying...");
             setTimeout(init, 500); 
             return;
         }
@@ -26,22 +23,37 @@
         resizeCanvas();
         setupToolbar();
 
-        // 🚩 ENSURE POINTER EVENTS WORK
-        canvas.style.touchAction = 'none'; // Critical for mobile demos
+        canvas.style.touchAction = 'none';
         
         canvas.onpointerdown = handleDown;
         canvas.onpointermove = handleMove;
         canvas.onpointerup = handleUp;
-        canvas.onpointerout = handleUp;
-        canvas.onpointercancel = handleUp;
     }
 
     function setupToolbar() {
+        // Tools
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
-            btn.onclick = (e) => {
-                e.preventDefault();
+            btn.onclick = () => {
                 currentTool = btn.dataset.tool;
                 document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
+        });
+
+        // Colors
+        document.querySelectorAll('.color-dot').forEach(btn => {
+            btn.onclick = () => {
+                currentColor = btn.dataset.color;
+                document.querySelectorAll('.color-dot').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            };
+        });
+
+        // Weights
+        document.querySelectorAll('.weight-btn').forEach(btn => {
+            btn.onclick = () => {
+                currentWeight = parseInt(btn.dataset.weight);
+                document.querySelectorAll('.weight-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             };
         });
@@ -61,10 +73,7 @@
 
     function getLocalCoords(e) {
         const rect = canvas.getBoundingClientRect();
-        return { 
-            x: (e.clientX - rect.left), 
-            y: (e.clientY - rect.top) 
-        };
+        return { x: (e.clientX - rect.left), y: (e.clientY - rect.top) };
     }
 
     function handleDown(e) {
@@ -78,13 +87,12 @@
             tempElement = {
                 type: currentTool,
                 points: currentTool === 'pen' ? [[pos.x, pos.y]] : [[pos.x, pos.y], [pos.x, pos.y]],
-                // 🚩 Seed Persistence: Prevent jittering
+                stroke: currentColor,
+                strokeWidth: currentWeight,
                 seed: Math.floor(Math.random() * 100000)
             };
         }
-        // Redraw immediately to show start point
         redraw();
-        if (tempElement) drawElement(tempElement);
     }
 
     function handleMove(e) {
@@ -121,29 +129,24 @@
 
     function drawElement(el) {
         if (!rc) return;
-        // 🚩 Use the stored seed for consistency
         const opts = { 
-            stroke: '#4f46e5', 
-            strokeWidth: 3, 
+            stroke: el.stroke, 
+            strokeWidth: el.strokeWidth, 
             roughness: el.type === 'pen' ? 0.3 : 1,
             seed: el.seed 
         };
         
-        try {
-            if (el.type === 'pen') {
-                rc.linearPath(el.points, opts);
-            } else if (el.type === 'line') {
-                const [p1, p2] = el.points;
-                rc.line(p1[0], p1[1], p2[0], p2[1], opts);
-            } else if (el.type === 'rectangle') {
-                const [p1, p2] = el.points;
-                rc.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
-            } else if (el.type === 'ellipse') {
-                const [p1, p2] = el.points;
-                rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
-            }
-        } catch (err) {
-            console.error("Draw Error:", err);
+        if (el.type === 'pen') {
+            rc.linearPath(el.points, opts);
+        } else if (el.type === 'line') {
+            const [p1, p2] = el.points;
+            rc.line(p1[0], p1[1], p2[0], p2[1], opts);
+        } else if (el.type === 'rectangle') {
+            const [p1, p2] = el.points;
+            rc.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
+        } else if (el.type === 'ellipse') {
+            const [p1, p2] = el.points;
+            rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
         }
     }
 
@@ -155,7 +158,6 @@
         redraw();
     }
 
-    // Start when ready
     if (document.readyState === 'complete') init();
     else window.addEventListener('load', init);
 })();
