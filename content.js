@@ -1,22 +1,23 @@
 /**
- * IITM Annotation Extension - Content Script (V9 Minimalist)
- * (Universal Cursor Tool, Custom Confirmation UI, and Zero Clutter)
+ * IITM Annotation Extension - Content Script (V10 Mobile & Touch)
+ * (Responsive Toolbar, Touch Lock, and Mobile Scaling)
  */
 
 (function() {
   let isEnabled = false;
   let isDrawing = false;
-  let currentTool = 'cursor'; // 🚩 THE DEFAULT: Safe Cursor Mode
+  let currentTool = 'cursor';
   let currentColor = '#4f46e5';
   let currentWeight = 5;
   let elements = [];
   let tempElement = null;
+  let activePointerId = null; // 🚩 For Touch/Palm Rejection
 
   let overlay, canvas, ctx, rc, toolbar;
 
   // ── 1. Initialization ──────────────────────────────────────────────────────
   function init() {
-    console.log("IITM Annotator: Initializing V9 (Minimalist)...");
+    console.log("IITM Annotator: Initializing V10 (Mobile & Touch)...");
     
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.onMessage.addListener((request) => {
@@ -29,7 +30,6 @@
     createToggleFAB();
     loadAnnotations();
     
-    // Heartbeat for SPA stability & Page Growth
     setInterval(ensureUIPresence, 2000);
     setupDOMWatcher();
   }
@@ -47,6 +47,11 @@
       resizeOb.observe(document.body);
       resizeOb.observe(document.documentElement);
     }
+    
+    // 🚩 Orientation Change support
+    window.addEventListener('orientationchange', () => {
+       setTimeout(resizeCanvas, 300);
+    });
   }
 
   function ensureUIPresence() {
@@ -75,7 +80,10 @@
       </svg>
     `;
     fab.title = "Toggle Whiteboard (Annotator)";
-    fab.onclick = toggleWhiteboard;
+    fab.onclick = (e) => {
+      e.stopPropagation();
+      toggleWhiteboard();
+    };
     document.body.appendChild(fab);
   }
 
@@ -113,10 +121,12 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
+    // Universal Pointer Events (Touch, Mouse, Pen)
     canvas.onpointerdown = handleDown;
     canvas.onpointermove = handleMove;
     canvas.onpointerup = handleUp;
     canvas.onpointerout = handleUp;
+    canvas.onpointercancel = handleUp;
   }
 
   function createToolbar() {
@@ -153,7 +163,6 @@
         <button class="iitm-tool-btn" data-tool="close" title="Close"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
       </div>
 
-      <!-- 🚩 CUSTOM MINIMAL CONFIRMATION POPOVER -->
       <div class="iitm-confirm-popover" id="iitm-clear-popover">
         <div class="iitm-confirm-title">Clear all annotations?</div>
         <div class="iitm-confirm-footer">
@@ -163,7 +172,10 @@
       </div>
     `;
 
+    toolbar.onpointerdown = (e) => e.stopPropagation(); // 🚩 Don't draw when clicking toolbar
+    
     toolbar.onclick = (e) => {
+      e.stopPropagation();
       const toolBtn = e.target.closest('[data-tool]');
       const colorBtn = e.target.closest('[data-color]');
       const weightBtn = e.target.closest('[data-weight]');
@@ -182,7 +194,6 @@
       }
     };
 
-    // Confirm Logic
     toolbar.querySelector('#iitm-clear-no').onclick = hideClearConfirm;
     toolbar.querySelector('#iitm-clear-yes').onclick = () => {
       elements = []; saveAnnotations(); redraw(); hideClearConfirm();
@@ -204,8 +215,7 @@
   function setTool(tool) {
     currentTool = tool;
     toolbar.querySelectorAll('[data-tool]').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
-    // Reset Canvas cursor
-    canvas.style.cursor = tool === 'cursor' ? 'default' : (tool === 'eraser' ? 'crosshair' : 'crosshair');
+    canvas.style.cursor = tool === 'cursor' ? 'default' : 'crosshair';
   }
 
   function setColor(color) {
@@ -237,15 +247,15 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  /**
-   * ── 2. Drawing Logic ───────────────────────────────────────────────────────
-   */
+  // ── 2. Drawing Logic ───────────────────────────────────────────────────────
   function handleDown(e) {
     if (!isEnabled) return;
-    // 🚩 CURSOR SAFETY GUARD: No drawing in pointer mode
     if (currentTool === 'cursor') return;
-    
     if (e.target.closest('.iitm-annotation-toolbar') || e.target.closest('.iitm-toggle-fab')) return;
+    
+    // 🚩 PALM REJECTION: Only handle primary pointer (one finger/mouse)
+    if (!e.isPrimary) return;
+    activePointerId = e.pointerId;
 
     isDrawing = true;
     const pos = getLocalCoords(e);
@@ -265,8 +275,9 @@
 
   function handleMove(e) {
     if (!isDrawing || !isEnabled || !tempElement) return;
+    if (e.pointerId !== activePointerId) return; // Ignore secondary touches
+    
     const pos = getLocalCoords(e);
-
     if (currentTool === 'pen') {
       tempElement.points.push([pos.x, pos.y]);
     } else {
@@ -276,14 +287,15 @@
     drawElement(tempElement);
   }
 
-  function handleUp() {
-    if (isDrawing && tempElement) {
+  function handleUp(e) {
+    if (isDrawing && tempElement && e.pointerId === activePointerId) {
       elements.push(tempElement);
       tempElement = null;
       saveAnnotations();
       redraw();
     }
     isDrawing = false;
+    activePointerId = null;
   }
 
   function redraw() {
@@ -330,7 +342,7 @@
     const key = `iitm_anno_${window.location.pathname}${window.location.search}`;
     const data = {}; data[key] = elements;
     if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set(data, () => console.log("Saved V9 (Minimalist):", elements.length));
+        chrome.storage.local.set(data, () => console.log("Saved V10 (Mobile):", elements.length));
     }
   }
 

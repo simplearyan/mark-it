@@ -1,4 +1,4 @@
-/* IITM Annotation Extension Styles (V9 Minimalist Upgrade) */
+/* IITM Annotation Extension Styles (V10 Mobile & Touch Support) */
 
 :root {
   --iitm-primary: #4f46e5;
@@ -24,9 +24,11 @@
   display: block;
   pointer-events: auto; /* Catch drawing */
   background: transparent;
+  /* 🚩 TOUCH LOCK: Prevent scrolling/panning during drawing */
+  touch-action: none; 
 }
 
-/* Floating Toolbar V9 (Minimalist) */
+/* Floating Toolbar V10 (Responsive) */
 .iitm-annotation-toolbar {
   position: fixed;
   bottom: 30px;
@@ -43,14 +45,25 @@
   align-items: center;
   gap: 12px;
   z-index: var(--z-toolbar);
-  transition: all 0.3s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: auto;
+  /* 🚩 Horizontal Scroll Support */
+  max-width: 90vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none; /* Firefox */
+}
+
+.iitm-annotation-toolbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 .iitm-toolbar-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .iitm-tool-btn {
@@ -66,6 +79,7 @@
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
+  flex-shrink: 0;
 }
 
 .iitm-tool-btn:hover {
@@ -89,6 +103,7 @@
   transition: transform 0.2s;
   padding: 0;
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 1);
+  flex-shrink: 0;
 }
 
 .iitm-color-dot:hover {
@@ -105,15 +120,16 @@
   height: 24px;
   background: rgba(0, 0, 0, 0.1);
   margin: 0 6px;
+  flex-shrink: 0;
 }
 
-/* Custom Minimal Confirmation V9 */
+/* Custom Minimal Confirmation V10 */
 .iitm-confirm-popover {
   position: absolute;
   bottom: 80px; 
   left: 50%;
   transform: translateX(-50%) translateY(10px);
-  background: #1e293b; /* Darker for focus */
+  background: #1e293b; 
   color: white;
   padding: 12px 18px;
   border-radius: 16px;
@@ -161,7 +177,66 @@
 .iitm-confirm-yes { background: #ef4444; color: white; }
 .iitm-confirm-yes:hover { background: #dc2626; }
 
-/* FAB Toggle V9 */
+/* 🚩 MOBILE BREAKPOINTS */
+@media (max-width: 768px) {
+  .iitm-annotation-toolbar {
+    bottom: 20px;
+    padding: 8px 16px;
+    gap: 8px;
+    border-radius: 20px;
+  }
+  
+  .iitm-tool-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  
+  .iitm-color-dot {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .iitm-toggle-fab {
+    width: 56px;
+    height: 56px;
+    bottom: 20px;
+    right: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .iitm-annotation-toolbar {
+    padding: 6px 12px;
+    gap: 6px;
+    bottom: 15px;
+    max-width: 95vw;
+  }
+  
+  .iitm-tool-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  
+  .iitm-color-dot {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .iitm-divider {
+    margin: 0 4px;
+  }
+  
+  .iitm-toggle-fab {
+    width: 48px;
+    height: 48px;
+    bottom: 15px;
+    right: 15px;
+  }
+}
+
+/* FAB Toggle V10 */
 .iitm-toggle-fab {
   position: fixed;
   bottom: 30px;
