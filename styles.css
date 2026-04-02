@@ -199,10 +199,14 @@
   }
   
   .iitm-toggle-fab {
-    width: 10px !important; 
-    height: 10px !important;
-    bottom: 30vh !important;  /* 🚩 Forced High for Tablets */
+    width: 38px !important; 
+    height: 38px !important;
+    bottom: 15vh !important;  
     right: 2vw !important;
+  }
+  .iitm-toggle-fab svg {
+    width: 20px !important;
+    height: 20px !important;
   }
 }
 
@@ -215,25 +219,21 @@
   }
   
   .iitm-tool-btn {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 8px;
   }
   
-  .iitm-color-dot {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .iitm-divider {
-    margin: 0 4px;
-  }
-  
   .iitm-toggle-fab {
-    width: 16px !important;  /* 🚩 Ultra-compact for small screens */
-    height: 16px !important;
-    bottom: 30vh !important;  /* 🚩 Center-Vertical */
-    right: 3vw !important;
+    width: 32px !important;  /* 🚩 Correct compact size */
+    height: 32px !important;
+    bottom: 15vh !important; 
+    right: 2vw !important;
+  }
+  
+  .iitm-toggle-fab svg {
+    width: 18px !important;   /* 🚩 Scale the internal icon too */
+    height: 18px !important;
   }
 }
 
