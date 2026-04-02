@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "IITM LMS Annotator",
+  "version": "1.0.0",
+  "description": "Premium Rough.js annotations for IITM Online Degree lessons and videos.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Toggle IITM Annotator",
+    "default_icon": "icons/icon.png"
+  },
+  "icons": {
+    "128": "icons/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "lib/rough.js",
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/rough.js"],
+      "matches": ["*://seek.onlinedegree.iitm.ac.in/*"]
+    }
+  ]
+}
