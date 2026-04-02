@@ -155,13 +155,31 @@
         } else if (el.type === 'ellipse') {
             const [p1, p2] = el.points;
             rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
+        } else if (el.type === 'triangle') {
+            const [p1, p2] = el.points;
+            const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
+            const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
+            rc.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
+        } else if (el.type === 'graph') {
+            const [p1, p2] = el.points;
+            const midX = (p1[0] + p2[0]) / 2;
+            const midY = (p1[1] + p2[1]) / 2;
+            rc.line(p1[0], midY, p2[0], midY, opts); // X
+            rc.line(midX, p1[1], midX, p2[1], opts); // Y
         }
     }
 
     function eraseAt(pos) {
         elements = elements.filter(el => {
-            const p = el.points[0];
-            return Math.hypot(p[0] - pos.x, p[1] - pos.y) > 30;
+            if (el.type === 'pen') return !el.points.some(p => Math.hypot(p[0] - pos.x, p[1] - pos.y) < 15);
+            const [p1, p2] = el.points;
+            const minX = Math.min(p1[0], p2[0]), maxX = Math.max(p1[0], p2[0]);
+            const minY = Math.min(p1[1], p2[1]), maxY = Math.max(p1[1], p2[1]);
+            const distToEdge = Math.min(
+                Math.abs(pos.x - minX), Math.abs(pos.x - maxX),
+                Math.abs(pos.y - minY), Math.abs(pos.y - maxY)
+            );
+            return distToEdge > 10;
         });
         redraw();
     }
