@@ -96,10 +96,13 @@
       overlay.classList.remove('hidden');
       toolbar.classList.remove('hidden');
       if (fab) fab.classList.remove('hidden');
+      // 🚩 Force scroll-lock to prevent horizontal jitter
+      document.documentElement.style.overflowX = 'hidden'; 
       setTimeout(resizeCanvas, 100); 
     } else {
       if (overlay) overlay.classList.add('hidden');
       if (toolbar) toolbar.classList.add('hidden');
+      document.documentElement.style.overflowX = ''; 
     }
   }
 
@@ -230,13 +233,15 @@
 
   function resizeCanvas() {
     if (!canvas || !overlay) return;
+    // 🚩 Height: Total document height for sticky scrolling
     const fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight);
-    const fullWidth = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth, window.innerWidth);
+    // 🚩 Width: STRICT viewport width to kill the horizontal scrollbar
+    const viewWidth = window.innerWidth;
     
-    if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
-       overlay.style.width = fullWidth + 'px';
+    if (canvas.width !== viewWidth || canvas.height !== fullHeight) {
+       overlay.style.width = viewWidth + 'px';
        overlay.style.height = fullHeight + 'px';
-       canvas.width = fullWidth;
+       canvas.width = viewWidth;
        canvas.height = fullHeight;
        redraw();
     }
