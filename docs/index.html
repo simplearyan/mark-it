@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markit | Professional LMS Annotation Suite</title>
+    <meta name="description" content="Pixel-perfect, SPA-resilient, and mobile-ready annotations for the IITM LMS. Built for students and professionals.">
+    
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Outfit:wght@800&display=swap" rel="stylesheet">
+    
+    <!-- Branding & Styles -->
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="../icons/icon512.png">
+</head>
+<body>
+
+    <!-- 🚩 HERO -->
+    <section class="hero">
+        <div class="logo-container">
+            <img src="../icons/icon512.png" alt="Markit Logo" width="120" height="120">
+        </div>
+        <h1>Markit.</h1>
+        <p>The high-performance annotation engine for the modern student. Built to handle React/Angular LMS environments with zero-jitter ink.</p>
+        
+        <div class="playground-wrap">
+            <div class="playground-toolbar">
+                <button class="tool-btn active" data-tool="pen">Pen</button>
+                <button class="tool-btn" data-tool="line">Line</button>
+                <button class="tool-btn" data-tool="rectangle">Rectangle</button>
+                <button class="tool-btn" data-tool="ellipse">Circle</button>
+                <button class="tool-btn" data-tool="eraser">Eraser</button>
+                <div style="flex: 1"></div>
+                <button class="tool-btn" id="clear-btn" style="color: #ef4444">Clear All</button>
+            </div>
+            <!-- Interactive Playground -->
+            <canvas id="demo-canvas"></canvas>
+            <div style="position: absolute; bottom: 12px; right: 20px; color: #94a3b8; font-size: 12px; font-weight: 500; pointer-events: none;">Try drawing here! 👆</div>
+        </div>
+
+        <a href="https://github.com/simplearyan/mark-it" class="cta-btn">View on GitHub</a>
+    </section>
+
+    <!-- 🚩 FEATURES -->
+    <section class="features">
+        <div class="card">
+            <div class="icon">🚀</div>
+            <h3>SPA Resilience</h3>
+            <p>Our Heartbeat Engine automatically recovers drawings when React or Angular re-renders the page. Never lose a note again.</p>
+        </div>
+        <div class="card">
+            <h3>Zero Jitter</h3>
+            <p>Advanced coordinate resolution ensures your marks stay exactly where you put them, even on extremely long scrollable pages.</p>
+        </div>
+        <div class="card">
+            <h3>Mobile-First</h3>
+            <p>Fully optimized for touch-screens and tablets with palm rejection and swipeable toolbars.</p>
+        </div>
+    </section>
+
+    <!-- 🚩 FOOTER -->
+    <footer>
+        <h2 style="color: white; margin-bottom: 8px;">Built by Aryan.</h2>
+        <p>A SimpleAryan production. Ready for the next class.</p>
+        
+        <div class="footer-links">
+            <a href="https://github.com/simplearyan" target="_blank">GitHub</a>
+            <a href="https://simplearyan.github.io" target="_blank">Portfolio</a>
+            <a href="https://youtube.com/@SimpleAryan" target="_blank">YouTube</a>
+        </div>
+        
+        <p style="font-size: 13px; opacity: 0.5;">© 2026 Markit. MIT Licensed.</p>
+    </footer>
+
+    <!-- 🚩 SCRIPTS -->
+    <script src="../lib/rough.js"></script>
+    <script src="demo.js"></script>
+</body>
+</html>

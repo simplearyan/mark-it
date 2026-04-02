@@ -1,0 +1,218 @@
+/* Markit Landing Page Styles (V1.0.0 Global Release) */
+
+:root {
+  --indigo-500: #6366f1;
+  --indigo-600: #4f46e5;
+  --text-900: #0f172a;
+  --text-600: #475569;
+  --bg-white: #ffffff;
+  --bg-plate: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  background: #f8fafc;
+  color: var(--text-900);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* 🚩 HERO SECTION */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* 🚩 Fix: Prevent top cutoff */
+  text-align: center;
+  padding: 80px 20px;
+  background: radial-gradient(circle at top, #e0e7ff 0%, #f8fafc 40%);
+  gap: 12px;
+}
+
+.logo-container {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 12px;
+  animation: float 6s ease-in-out infinite;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.logo-container:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(to right, var(--indigo-600), #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text; /* 🚩 Lint Fix: Standard property */
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+.hero p {
+  font-size: 1.25rem;
+  color: var(--text-600);
+  max-width: 600px;
+  margin-bottom: 40px;
+}
+
+/* 🚩 INTERACTIVE PLAYGROUND */
+.playground-wrap {
+  width: 100%;
+  max-width: 900px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  margin-bottom: 60px;
+  border: 1px solid rgba(0,0,0,0.05);
+  position: relative;
+}
+
+.playground-toolbar {
+  background: #f1f5f9;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.tool-btn {
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-600);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tool-btn.active {
+  background: var(--indigo-600);
+  color: white;
+}
+
+#demo-canvas {
+  width: 100%;
+  height: 450px;
+  cursor: crosshair;
+  background: url("https://www.transparenttextures.com/patterns/cubes.png"); /* Light pattern */
+}
+
+/* 🚩 FEATURE GRID */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto 100px;
+  padding: 0 20px;
+}
+
+.card {
+  background: var(--bg-plate);
+  backdrop-filter: blur(20px);
+  padding: 40px;
+  border-radius: 24px;
+  border: 1.5px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card .icon {
+  width: 48px;
+  height: 48px;
+  background: var(--indigo-600);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+}
+
+.card p {
+  color: var(--text-600);
+}
+
+/* 🚩 FOOTER */
+footer {
+  background: #0f172a;
+  color: #94a3b8;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 40px 0;
+}
+
+.footer-links a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.footer-links a:hover {
+  opacity: 1;
+}
+
+.cta-btn {
+  display: inline-block;
+  padding: 16px 32px;
+  background: var(--indigo-600);
+  color: white;
+  text-decoration: none;
+  font-weight: 700;
+  border-radius: 16px;
+  box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+  transition: all 0.2s;
+}
+
+.cta-btn:hover {
+  background: var(--indigo-500);
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(79, 70, 229, 0.4);
+}
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 3rem; }
+  .playground-wrap { border-radius: 0; }
+  #demo-canvas { height: 350px; }
+}
