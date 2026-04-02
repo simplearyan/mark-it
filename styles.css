@@ -1,4 +1,4 @@
-/* IITM Annotation Extension Styles (V6 Final Accuracy Fix) */
+/* IITM Annotation Extension Styles (V8 PIXEL ACCURACY) */
 
 :root {
   --iitm-primary: #4f46e5;
@@ -6,28 +6,27 @@
   --bg-blur: rgba(255, 255, 255, 0.9);
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   /* Z-Index layers: Max Priority */
-  --z-overlay: 2147483646; 
+  --z-overlay: 10000000; 
   --z-toolbar: 2147483647; /* Highest */
 }
 
-/* 🚩 THE VIEWPORT FIX: Switch Absolute (Document) back to Fixed (Viewport) */
+/* 🚩 THE ACCURACY FIX: Absolute positioning with EXPLICIT dimensions set by JS */
 .iitm-whiteboard-overlay {
-  position: fixed; 
+  position: absolute; 
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  /* Removed width/height: 100% to prevent squashing on long pages */
   z-index: var(--z-overlay);
   pointer-events: none;
   touch-action: none;
   background: transparent;
+  overflow: visible;
 }
 
 .iitm-whiteboard-canvas {
-  width: 100%;
-  height: 100%;
   display: block;
   pointer-events: auto; /* Catch drawing */
+  background: transparent;
 }
 
 /* Floating Toolbar (Fixed to Viewport) */
@@ -113,7 +112,7 @@
   margin: 0 10px;
 }
 
-/* Minimize State V6 (Fixed Toggle) */
+/* Minimize State V8 (Fixed Toggle) */
 .iitm-annotation-toolbar.minimized {
   width: 64px;
   height: 64px;

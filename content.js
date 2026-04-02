@@ -1,6 +1,6 @@
 /**
- * IITM Annotation Extension - Content Script (V6 Final Accuracy)
- * (Viewport-Fixed Canvas with Scroll-Translation Engine)
+ * IITM Annotation Extension - Content Script (V8 PIXEL ACCURACY)
+ * (Synchronized Scaling Engine, Local Space Resolver, and SPA Reflow)
  */
 
 (function() {
@@ -17,7 +17,7 @@
 
   // ── 1. Initialization ──────────────────────────────────────────────────────
   function init() {
-    console.log("IITM Annotator: Initializing V6 (Final Accuracy)...");
+    console.log("IITM Annotator: Initializing V8 (Pixel Accuracy)...");
     
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.onMessage.addListener((request) => {
@@ -30,14 +30,8 @@
     createToggleFAB();
     loadAnnotations();
     
-    // Heartbeat for SPA stability
+    // Heartbeat for SPA stability & Page Growth
     setInterval(ensureUIPresence, 2000);
-    
-    // 🚩 SCROLL WATCHER: Trigger redraw when page scrolls
-    window.addEventListener('scroll', () => {
-       if (isEnabled) requestAnimationFrame(redraw);
-    }, { passive: true });
-
     setupDOMWatcher();
   }
 
@@ -46,6 +40,15 @@
        if (isEnabled) ensureUIPresence();
     });
     observer.observe(document.body, { childList: true, subtree: false });
+
+    // Watch for Dynamic Page Growth (e.g. infinite scroll, read more)
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeOb = new ResizeObserver(() => {
+         if (isEnabled && canvas) resizeCanvas();
+      });
+      resizeOb.observe(document.body);
+      resizeOb.observe(document.documentElement);
+    }
   }
 
   function ensureUIPresence() {
@@ -87,8 +90,9 @@
       overlay.classList.remove('hidden');
       toolbar.classList.remove('hidden');
       if (fab) fab.classList.remove('hidden');
-      resizeCanvas(); 
-      redraw();
+      
+      // Delay slightly for SPA layout settling
+      setTimeout(resizeCanvas, 100); 
     } else {
       if (overlay) overlay.classList.add('hidden');
       if (toolbar) toolbar.classList.add('hidden');
@@ -195,25 +199,56 @@
   }
 
   function resizeCanvas() {
-    if (!canvas) return;
-    // 🚩 Accuracy Fix: Match EXACT viewport dimensions
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    redraw();
+    if (!canvas || !overlay) return;
+    
+    // 🚩 ACCURACY FIX: Get the full height of the document
+    const fullHeight = Math.max(
+      document.body.scrollHeight, 
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight
+    );
+    const fullWidth = Math.max(
+      document.body.scrollWidth,
+      document.documentElement.scrollWidth,
+      window.innerWidth
+    );
+    
+    // 🚩 PIXEL-PERFECT SYNC: Set pixel dimensions for BOTH container and canvas
+    if (canvas.width !== fullWidth || canvas.height !== fullHeight) {
+       // Set CSS size of the container
+       overlay.style.width = fullWidth + 'px';
+       overlay.style.height = fullHeight + 'px';
+       
+       // Set coordinate resolution of the canvas
+       canvas.width = fullWidth;
+       canvas.height = fullHeight;
+       
+       redraw();
+       console.log("IITM Annotator: Re-scaled to", fullWidth, "x", fullHeight);
+    }
   }
 
   // ── 2. Drawing Logic ───────────────────────────────────────────────────────
+  /**
+   * 🚩 THE LOCAL RESOLVER
+   * Calculates mapping relative strictly to the Canvas element.
+   * On long pages, rect.top will be negative if scrolled, correctly compensating.
+   */
+  function getLocalCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
   function handleDown(e) {
     if (!isEnabled) return;
     if (e.target.closest('.iitm-annotation-toolbar') || e.target.closest('.iitm-toggle-fab')) return;
 
     isDrawing = true;
-    
-    // 🚩 ACCURACY FIX: Store Absolute Page Coordinates (Viewport Mouse + Global Scroll)
-    const pos = { 
-      x: e.clientX + window.scrollX, 
-      y: e.clientY + window.scrollY 
-    };
+    const pos = getLocalCoords(e);
 
     if (currentTool === 'eraser') {
       eraseAt(pos);
@@ -230,11 +265,7 @@
 
   function handleMove(e) {
     if (!isDrawing || !isEnabled || !tempElement) return;
-    
-    const pos = { 
-      x: e.clientX + window.scrollX, 
-      y: e.clientY + window.scrollY 
-    };
+    const pos = getLocalCoords(e);
 
     if (currentTool === 'pen') {
       tempElement.points.push([pos.x, pos.y]);
@@ -242,9 +273,8 @@
       tempElement.points = [tempElement.points[0], [pos.x, pos.y]];
     }
     
-    // During move, we redraw the entire viewport including the ghost
     redraw();
-    drawTranslatedElement(tempElement);
+    drawElement(tempElement);
   }
 
   function handleUp() {
@@ -261,51 +291,38 @@
   function redraw() {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    elements.forEach(drawTranslatedElement);
+    elements.forEach(drawElement);
   }
 
-  /**
-   * 🚩 THE ENGINE: Core Translation Mapper
-   * Transforms stored absolute coordinates -> viewport positions
-   */
-  function drawTranslatedElement(el) {
-    // Translate all stored points by current scroll offset
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    
-    const translatedEl = {
-       ...el,
-       points: el.points.map(p => [p[0] - scrollX, p[1] - scrollY])
-    };
-
+  function drawElement(el) {
     const isPen = el.type === 'pen';
-    const opts = { stroke: el.stroke, strokeWidth: el.strokeWidth, roughness: isPen ? 0 : 1.5, seed: el.seed };
+    const opts = { stroke: el.stroke, strokeWidth: el.strokeWidth, roughness: isPen ? 0 : 1.2, seed: el.seed };
     
     if (isPen) {
-      rc.linearPath(translatedEl.points, opts);
+      rc.linearPath(el.points, opts);
     } else if (el.type === 'line') {
-      const [p1, p2] = translatedEl.points;
+      const [p1, p2] = el.points;
       rc.line(p1[0], p1[1], p2[0], p2[1], opts);
     } else if (el.type === 'rectangle') {
-      const [p1, p2] = translatedEl.points;
+      const [p1, p2] = el.points;
       rc.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
     } else if (el.type === 'ellipse') {
-      const [p1, p2] = translatedEl.points;
+      const [p1, p2] = el.points;
       rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
     } else if (el.type === 'arrow') {
-      const [[x1, y1], [x2, y2]] = translatedEl.points;
+      const [[x1, y1], [x2, y2]] = el.points;
       rc.line(x1, y1, x2, y2, opts);
       const angle = Math.atan2(y2 - y1, x2 - x1);
       const head = 15;
       rc.line(x2, y2, x2 - head * Math.cos(angle - Math.PI / 6), y2 - head * Math.sin(angle - Math.PI / 6), opts);
       rc.line(x2, y2, x2 - head * Math.cos(angle + Math.PI / 6), y2 - head * Math.sin(angle + Math.PI / 6), opts);
     } else if (el.type === 'triangle') {
-      const [p1, p2] = translatedEl.points;
+      const [p1, p2] = el.points;
       const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
       const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
       rc.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
     } else if (el.type === 'graph') {
-      const [p1, p2] = translatedEl.points;
+      const [p1, p2] = el.points;
       const xMid = p1[0] + (p2[0] - p1[0]) / 2;
       const yMid = p1[1] + (p2[1] - p1[1]) / 2;
       rc.line(xMid, Math.min(p1[1], p2[1]), xMid, Math.max(p1[1], p2[1]), opts);
@@ -330,7 +347,7 @@
     const key = `iitm_anno_${window.location.pathname}${window.location.search}`;
     const data = {}; data[key] = elements;
     if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.set(data, () => console.log("Saved V6:", elements.length));
+        chrome.storage.local.set(data, () => console.log("Saved V8 PIXEL ACCURACY:", elements.length));
     }
   }
 
