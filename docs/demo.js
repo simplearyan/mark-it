@@ -8,6 +8,7 @@
     let currentWeight = 5;
     let elements = [];
     let tempElement = null;
+    let activePointerId = null; // 🚩 FIXED: Added missing variable declaration
 
     function init() {
         console.log("Markit Demo: Initializing...");
