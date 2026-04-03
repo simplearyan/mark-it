@@ -11,6 +11,7 @@
   let tempElement = null;
   let activePointerId = null;
 
+  let isProMode = false;
   let overlay, canvasStatic, ctxStatic, rcStatic, canvasDynamic, ctxDynamic, rcDynamic, toolbar;
 
   // ── 1. Initialization ──────────────────────────────────────────────────────
@@ -108,6 +109,25 @@
     canvasDynamic.onpointerup = handleUp;
     canvasDynamic.onpointerout = handleUp;
     canvasDynamic.onpointercancel = handleUp;
+
+    window.addEventListener('scroll', () => {
+      if (isEnabled && isProMode) requestAnimationFrame(redraw);
+    }, { passive: true });
+  }
+
+  function toggleProMode() {
+    isProMode = !isProMode;
+    if (overlay) overlay.classList.toggle('pro', isProMode);
+    
+    const proBtn = document.getElementById('iitm-pro-btn');
+    if (proBtn) {
+      proBtn.innerText = isProMode ? '⚡' : '🏝️';
+      proBtn.style.color = isProMode ? '#fbbf24' : '#94a3b8';
+      proBtn.style.background = isProMode ? 'rgba(251, 191, 36, 0.1)' : 'transparent';
+    }
+    
+    resizeCanvas();
+    saveAnnotations();
   }
 
   function toggleWhiteboard(forceState) {
@@ -159,6 +179,7 @@
       </div>
       <div class="iitm-divider"></div>
       <div class="iitm-toolbar-group">
+        <button class="iitm-tool-btn" id="iitm-pro-btn" title="Adaptive Pro Mode (Speed Boost)">🏝️</button>
         <button class="iitm-tool-btn" id="iitm-clear-trigger" title="Clear All"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
       </div>
 
@@ -179,6 +200,8 @@
       const weightBtn = e.target.closest('[data-weight]');
       const clearBtn = e.target.closest('#iitm-clear-trigger');
 
+      const proBtn = e.target.closest('#iitm-pro-btn');
+
       if (toolBtn) {
         setTool(toolBtn.dataset.tool);
       } else if (colorBtn) {
@@ -187,6 +210,8 @@
         setWeight(parseInt(weightBtn.dataset.weight));
       } else if (clearBtn) {
         showClearConfirm();
+      } else if (proBtn) {
+        toggleProMode();
       }
     };
 
@@ -233,19 +258,36 @@
 
   function resizeCanvas() {
     if (!canvasStatic || !overlay) return;
-    canvasStatic.width = window.innerWidth;
-    canvasStatic.height = window.innerHeight;
-    canvasDynamic.width = window.innerWidth;
-    canvasDynamic.height = window.innerHeight;
     
-    overlay.style.width = canvasStatic.width + 'px';
-    overlay.style.height = canvasStatic.height + 'px';
-    redraw();
+    let viewWidth = window.innerWidth;
+    let fullHeight;
+
+    if (isProMode) {
+        fullHeight = window.innerHeight;
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+    } else {
+        fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight);
+        overlay.style.width = viewWidth + 'px';
+        overlay.style.height = fullHeight + 'px';
+    }
+
+    if (canvasStatic.width !== viewWidth || canvasStatic.height !== fullHeight) {
+        canvasStatic.width = viewWidth;
+        canvasStatic.height = fullHeight;
+        canvasDynamic.width = viewWidth;
+        canvasDynamic.height = fullHeight;
+        redraw();
+    }
   }
 
   function getLocalCoords(e) {
     const rect = canvasStatic.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (isProMode) {
+        return { x: e.clientX, y: e.clientY };
+    } else {
+        return { x: e.pageX, y: e.pageY };
+    }
   }
 
   // ── 2. Drawing Logic ───────────────────────────────────────────────────────
@@ -268,6 +310,11 @@
         strokeWidth: currentWeight,
         seed: Math.floor(Math.random() * 100000)
       };
+
+      if (isProMode) {
+        tempElement.points[0][1] += window.scrollY;
+        if (currentTool !== 'pen') tempElement.points[1][1] += window.scrollY;
+      }
     }
   }
 
@@ -275,14 +322,24 @@
     if (!isDrawing || !isEnabled || !tempElement || e.pointerId !== activePointerId) return;
     const pos = getLocalCoords(e);
     if (currentTool === 'pen') {
-      tempElement.points.push([pos.x, pos.y]);
+      const absY = isProMode ? (pos.y + window.scrollY) : pos.y;
+      tempElement.points.push([pos.x, absY]);
     } else {
-      tempElement.points = [tempElement.points[0], [pos.x, pos.y]];
+      const absY1 = isProMode ? (pos.y + window.scrollY) : pos.y;
+      tempElement.points = [tempElement.points[0], [pos.x, absY1]];
     }
     
     // ⚡ Performance Fix
     ctxDynamic.clearRect(0, 0, canvasDynamic.width, canvasDynamic.height);
-    drawElementInContext(rcDynamic, tempElement);
+    
+    if (isProMode) {
+        ctxDynamic.save();
+        ctxDynamic.setTransform(1, 0, 0, 1, 0, -window.scrollY);
+        drawElementInContext(rcDynamic, tempElement);
+        ctxDynamic.restore();
+    } else {
+        drawElementInContext(rcDynamic, tempElement);
+    }
   }
 
   function handleUp(e) {
@@ -301,7 +358,15 @@
   function redraw() {
     if (!ctxStatic) return;
     ctxStatic.clearRect(0, 0, canvasStatic.width, canvasStatic.height);
-    elements.forEach(el => drawElementInContext(rcStatic, el));
+    
+    if (isProMode) {
+        ctxStatic.save();
+        ctxStatic.setTransform(1, 0, 0, 1, 0, -window.scrollY);
+        elements.forEach(el => drawElementInContext(rcStatic, el));
+        ctxStatic.restore();
+    } else {
+        elements.forEach(el => drawElementInContext(rcStatic, el));
+    }
   }
 
   function drawElementInContext(roughCanvas, el) {

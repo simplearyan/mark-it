@@ -9,6 +9,7 @@
   let currentTool = 'cursor';
   let currentColor = '#4f46e5';
   let currentWeight = 5;
+  let isProMode = false; // ⚡ New High-Performance Mode
   let elements = [];
   let tempElement = null;
   let activePointerId = null; // 🚩 For Touch/Palm Rejection
@@ -183,6 +184,26 @@
     canvasDynamic.onpointerup = handleUp;
     canvasDynamic.onpointerout = handleUp;
     canvasDynamic.onpointercancel = handleUp;
+
+    window.addEventListener('scroll', () => {
+      if (isEnabled && isProMode) requestAnimationFrame(redraw);
+    }, { passive: true });
+  }
+
+  function toggleProMode() {
+    isProMode = !isProMode;
+    if (overlay) overlay.classList.toggle('pro', isProMode);
+    
+    // 🚩 UI Feedback
+    const proBtn = document.getElementById('iitm-pro-btn');
+    if (proBtn) {
+      proBtn.innerText = isProMode ? '⚡' : '🏝️';
+      proBtn.style.color = isProMode ? '#fbbf24' : '#94a3b8';
+      proBtn.style.background = isProMode ? 'rgba(251, 191, 36, 0.1)' : 'transparent';
+    }
+    
+    resizeCanvas();
+    saveAnnotations(); // Save mode preference? (optional)
   }
 
   function createToolbar() {
@@ -214,7 +235,7 @@
         <button class="iitm-tool-btn" data-weight="9" title="Thick"><div style="width: 12px; height: 12px; background: currentColor; border-radius: 50%"></div></button>
       </div>
       <div class="iitm-divider"></div>
-      <div class="iitm-toolbar-group">
+        <button class="iitm-tool-btn" id="iitm-pro-btn" title="Adaptive Pro Mode (60fps on Wikipedia)">🏝️</button>
         <button class="iitm-tool-btn" id="iitm-clear-trigger" title="Clear All"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="close" title="Close"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
       </div>
@@ -237,6 +258,8 @@
       const weightBtn = e.target.closest('[data-weight]');
       const clearBtn = e.target.closest('#iitm-clear-trigger');
 
+      const proBtn = e.target.closest('#iitm-pro-btn');
+      
       if (toolBtn) {
         const tool = toolBtn.dataset.tool;
         if (tool === 'close') toggleWhiteboard();
@@ -247,6 +270,8 @@
         setWeight(parseInt(weightBtn.dataset.weight));
       } else if (clearBtn) {
         showClearConfirm();
+      } else if (proBtn) {
+        toggleProMode();
       }
     };
 
@@ -286,25 +311,38 @@
 
   function resizeCanvas() {
     if (!canvasStatic || !overlay) return;
-    const fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight);
-    const viewWidth = window.innerWidth;
+    
+    let viewWidth = window.innerWidth;
+    let fullHeight;
+
+    if (isProMode) {
+      // ⚡ Pro Mode: Screen-sized canvas
+      fullHeight = window.innerHeight;
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
+    } else {
+      // 🏝️ Sticky Mode: Document-sized canvas
+      fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight);
+      overlay.style.width = viewWidth + 'px';
+      overlay.style.height = fullHeight + 'px';
+    }
     
     if (canvasStatic.width !== viewWidth || canvasStatic.height !== fullHeight) {
-       overlay.style.width = viewWidth + 'px';
-       overlay.style.height = fullHeight + 'px';
-       
        [canvasStatic, canvasDynamic].forEach(c => {
          c.width = viewWidth;
          c.height = fullHeight;
        });
-       
        redraw();
     }
   }
 
   function getLocalCoords(e) {
     const rect = canvasStatic.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (isProMode) {
+      return { x: e.clientX, y: e.clientY };
+    } else {
+      return { x: e.pageX, y: e.pageY };
+    }
   }
 
   // ── 2. Drawing Logic ───────────────────────────────────────────────────────
@@ -330,6 +368,12 @@
         strokeWidth: currentWeight,
         seed: Math.floor(Math.random() * 100000)
       };
+
+      // ⚡ Correct for Pro Mode spawn
+      if (isProMode) {
+        tempElement.points[0][1] += window.scrollY;
+        if (currentTool !== 'pen') tempElement.points[1][1] += window.scrollY;
+      }
     }
   }
 
@@ -339,14 +383,26 @@
     
     const pos = getLocalCoords(e);
     if (currentTool === 'pen') {
-      tempElement.points.push([pos.x, pos.y]);
+      // 🚩 Storage is ALWAYS absolute
+      const absY = isProMode ? (pos.y + window.scrollY) : pos.y;
+      tempElement.points.push([pos.x, absY]);
     } else {
-      tempElement.points = [tempElement.points[0], [pos.x, pos.y]];
+      const absY0 = isProMode ? (tempElement.points[0][1]) : tempElement.points[0][1]; // Already abs
+      const absY1 = isProMode ? (pos.y + window.scrollY) : pos.y;
+      tempElement.points = [tempElement.points[0], [pos.x, absY1]];
     }
     
     // ⚡ ULTRA-PERFORMANCE: Only clear/draw the dynamic layer
     ctxDynamic.clearRect(0, 0, canvasDynamic.width, canvasDynamic.height);
-    drawElementInContext(rcDynamic, tempElement);
+    
+    if (isProMode) {
+      ctxDynamic.save();
+      ctxDynamic.setTransform(1, 0, 0, 1, 0, -window.scrollY);
+      drawElementInContext(rcDynamic, tempElement);
+      ctxDynamic.restore();
+    } else {
+      drawElementInContext(rcDynamic, tempElement);
+    }
   }
 
   function handleUp(e) {
@@ -366,7 +422,15 @@
   function redraw() {
     if (!ctxStatic) return;
     ctxStatic.clearRect(0, 0, canvasStatic.width, canvasStatic.height);
-    elements.forEach(el => drawElementInContext(rcStatic, el));
+    
+    if (isProMode) {
+      ctxStatic.save();
+      ctxStatic.setTransform(1, 0, 0, 1, 0, -window.scrollY);
+      elements.forEach(el => drawElementInContext(rcStatic, el));
+      ctxStatic.restore();
+    } else {
+      elements.forEach(el => drawElementInContext(rcStatic, el));
+    }
   }
 
   function drawElementInContext(roughCanvas, el) {

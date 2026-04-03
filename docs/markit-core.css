@@ -21,6 +21,12 @@
   max-width: 100vw;
 }
 
+.iitm-whiteboard-overlay.pro {
+  position: fixed !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
 .iitm-whiteboard-canvas {
   position: absolute;
   top: 0;
