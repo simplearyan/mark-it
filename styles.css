@@ -22,11 +22,23 @@
 }
 
 .iitm-whiteboard-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
-  pointer-events: auto; /* Catch drawing */
   background: transparent;
   /* 🚩 TOUCH LOCK: Prevent scrolling/panning during drawing */
   touch-action: none; 
+}
+
+.iitm-canvas-static {
+  z-index: 1;
+  pointer-events: none; /* No interaction for finalized shapes */
+}
+
+.iitm-canvas-dynamic {
+  z-index: 2;
+  pointer-events: auto; /* Catch active drawing */
 }
 
 /* Floating Toolbar V10 (Responsive) */
@@ -124,59 +136,6 @@
   flex-shrink: 0;
 }
 
-/* Custom Minimal Confirmation V10 */
-.iitm-confirm-popover {
-  position: absolute;
-  bottom: 80px; 
-  left: 50%;
-  transform: translateX(-50%) translateY(10px);
-  background: #1e293b; 
-  color: white;
-  padding: 12px 18px;
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 180px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  z-index: var(--z-toolbar);
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.2s ease-out;
-}
-
-.iitm-confirm-popover.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(-50%) translateY(0);
-}
-
-.iitm-confirm-title {
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.iitm-confirm-footer {
-  display: flex;
-  gap: 8px;
-}
-
-.iitm-confirm-btn {
-  flex: 1;
-  padding: 6px 0;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  transition: background 0.2s;
-}
-
-.iitm-confirm-cancel { background: #334155; color: white; }
-.iitm-confirm-cancel:hover { background: #475569; }
-.iitm-confirm-yes { background: #ef4444; color: white; }
-.iitm-confirm-yes:hover { background: #dc2626; }
 
 /* 🚩 MOBILE BREAKPOINTS */
 @media (max-width: 768px) {

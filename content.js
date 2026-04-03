@@ -1,5 +1,5 @@
 /**
- * IITM Annotation Extension - Content Script (V10 Mobile & Touch)
+ * IITM Annotation Extension - Content Script (V1.4.2)
  * (Responsive Toolbar, Touch Lock, and Mobile Scaling)
  */
 
@@ -13,12 +13,14 @@
   let tempElement = null;
   let activePointerId = null; // 🚩 For Touch/Palm Rejection
 
-  let overlay, canvas, ctx, rc, toolbar;
+  let overlay, canvasStatic, ctxStatic, rcStatic, canvasDynamic, ctxDynamic, rcDynamic, toolbar;
 
   // ── 1. Initialization ──────────────────────────────────────────────────────
   function init() {
     console.log("IITM Annotator: Initializing V10 (Mobile & Touch)...");
     
+    injectPersistentStyles();
+
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.onMessage.addListener((request) => {
         if (request.action === "toggle_whiteboard") {
@@ -52,6 +54,49 @@
     window.addEventListener('orientationchange', () => {
        setTimeout(resizeCanvas, 300);
     });
+  }
+
+  function injectPersistentStyles() {
+    const styleId = 'iitm-zero-fail-styles';
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .iitm-annotation-toolbar { overflow-y: visible !important; }
+      .iitm-confirm-popover {
+        position: absolute !important;
+        bottom: calc(100% + 15px) !important;
+        right: 15px !important;
+        left: auto !important;
+        background: rgba(15, 23, 42, 0.98) !important;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        color: white !important;
+        padding: 10px 14px !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        min-width: 140px !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
+        z-index: 2147483647 !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: translateY(10px);
+        transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        border: 1px solid rgba(255,255,255,0.15) !important;
+      }
+      .iitm-confirm-popover.active {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: translateY(0) !important;
+      }
+      .iitm-confirm-title { font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; }
+      .iitm-confirm-btn { flex: 1 !important; padding: 6px 0 !important; border-radius: 8px !important; font-size: 12px !important; }
+      .iitm-confirm-cancel { background: #334155 !important; color: white !important; }
+      .iitm-confirm-yes { background: #ef4444 !important; color: white !important; }
+    `;
+    document.head.appendChild(style);
   }
 
   function ensureUIPresence() {
@@ -111,25 +156,33 @@
     overlay = document.createElement('div');
     overlay.className = 'iitm-whiteboard-overlay';
     
-    canvas = document.createElement('canvas');
-    canvas.className = 'iitm-whiteboard-canvas';
-    overlay.appendChild(canvas);
+    // 1. Static Canvas (The "Ink" that stays)
+    canvasStatic = document.createElement('canvas');
+    canvasStatic.className = 'iitm-whiteboard-canvas iitm-canvas-static';
+    overlay.appendChild(canvasStatic);
+    
+    // 2. Dynamic Canvas (The "Pen" you see while moving)
+    canvasDynamic = document.createElement('canvas');
+    canvasDynamic.className = 'iitm-whiteboard-canvas iitm-canvas-dynamic';
+    overlay.appendChild(canvasDynamic);
     
     createToolbar();
     document.body.appendChild(overlay);
     
-    ctx = canvas.getContext('2d');
-    rc = rough.canvas(canvas);
+    ctxStatic = canvasStatic.getContext('2d');
+    rcStatic = rough.canvas(canvasStatic);
+    ctxDynamic = canvasDynamic.getContext('2d');
+    rcDynamic = rough.canvas(canvasDynamic);
 
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Universal Pointer Events (Touch, Mouse, Pen)
-    canvas.onpointerdown = handleDown;
-    canvas.onpointermove = handleMove;
-    canvas.onpointerup = handleUp;
-    canvas.onpointerout = handleUp;
-    canvas.onpointercancel = handleUp;
+    // Interaction on the TOP layer (Dynamic)
+    canvasDynamic.onpointerdown = handleDown;
+    canvasDynamic.onpointermove = handleMove;
+    canvasDynamic.onpointerup = handleUp;
+    canvasDynamic.onpointerout = handleUp;
+    canvasDynamic.onpointercancel = handleUp;
   }
 
   function createToolbar() {
@@ -232,23 +285,25 @@
   }
 
   function resizeCanvas() {
-    if (!canvas || !overlay) return;
-    // 🚩 Height: Total document height for sticky scrolling
+    if (!canvasStatic || !overlay) return;
     const fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight);
-    // 🚩 Width: STRICT viewport width to kill the horizontal scrollbar
     const viewWidth = window.innerWidth;
     
-    if (canvas.width !== viewWidth || canvas.height !== fullHeight) {
+    if (canvasStatic.width !== viewWidth || canvasStatic.height !== fullHeight) {
        overlay.style.width = viewWidth + 'px';
        overlay.style.height = fullHeight + 'px';
-       canvas.width = viewWidth;
-       canvas.height = fullHeight;
+       
+       [canvasStatic, canvasDynamic].forEach(c => {
+         c.width = viewWidth;
+         c.height = fullHeight;
+       });
+       
        redraw();
     }
   }
 
   function getLocalCoords(e) {
-    const rect = canvas.getBoundingClientRect();
+    const rect = canvasStatic.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
@@ -288,8 +343,10 @@
     } else {
       tempElement.points = [tempElement.points[0], [pos.x, pos.y]];
     }
-    redraw();
-    drawElement(tempElement);
+    
+    // ⚡ ULTRA-PERFORMANCE: Only clear/draw the dynamic layer
+    ctxDynamic.clearRect(0, 0, canvasDynamic.width, canvasDynamic.height);
+    drawElementInContext(rcDynamic, tempElement);
   }
 
   function handleUp(e) {
@@ -297,6 +354,9 @@
       elements.push(tempElement);
       tempElement = null;
       saveAnnotations();
+      
+      // ⚡ Finalize onto Static layer
+      ctxDynamic.clearRect(0, 0, canvasDynamic.width, canvasDynamic.height);
       redraw();
     }
     isDrawing = false;
@@ -304,31 +364,31 @@
   }
 
   function redraw() {
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    elements.forEach(drawElement);
+    if (!ctxStatic) return;
+    ctxStatic.clearRect(0, 0, canvasStatic.width, canvasStatic.height);
+    elements.forEach(el => drawElementInContext(rcStatic, el));
   }
 
-  function drawElement(el) {
+  function drawElementInContext(roughCanvas, el) {
     const isPen = el.type === 'pen';
-    const opts = { stroke: el.stroke, strokeWidth: el.strokeWidth, roughness: isPen ? 0 : 1.2, seed: el.seed };
+    const opts = { stroke: el.stroke, strokeWidth: el.strokeWidth, roughness: (isPen || el.type === 'line') ? 0 : 1.2, seed: el.seed };
     
     if (isPen) {
-      rc.linearPath(el.points, opts);
+      roughCanvas.linearPath(el.points, opts);
     } else if (el.type === 'line') {
       const [p1, p2] = el.points;
-      rc.line(p1[0], p1[1], p2[0], p2[1], opts);
+      roughCanvas.line(p1[0], p1[1], p2[0], p2[1], opts);
     } else if (el.type === 'rectangle') {
       const [p1, p2] = el.points;
-      rc.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
+      roughCanvas.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
     } else if (el.type === 'ellipse') {
       const [p1, p2] = el.points;
-      rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
+      roughCanvas.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
     } else if (el.type === 'triangle') {
       const [p1, p2] = el.points;
       const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
       const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
-      rc.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
+      roughCanvas.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
     }
   }
 

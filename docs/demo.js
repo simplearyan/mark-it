@@ -1,7 +1,10 @@
 (function() {
-    const canvas = document.getElementById('demo-canvas');
-    const ctx = canvas.getContext('2d');
-    let rc = null;
+    const canvasStatic = document.getElementById('demo-canvas-static');
+    const ctxStatic = canvasStatic.getContext('2d');
+    const canvasDynamic = document.getElementById('demo-canvas-dynamic');
+    const ctxDynamic = canvasDynamic.getContext('2d');
+    let rcStatic = null;
+    let rcDynamic = null;
     let isDrawing = false;
     let currentTool = 'pen';
     let currentColor = '#4f46e5';
@@ -14,7 +17,8 @@
         console.log("Markit Demo: Initializing...");
         
         if (typeof rough !== 'undefined') {
-            rc = rough.canvas(canvas);
+            rcStatic = rough.canvas(canvasStatic);
+            rcDynamic = rough.canvas(canvasDynamic);
         } else {
             setTimeout(init, 500); 
             return;
@@ -24,11 +28,11 @@
         resizeCanvas();
         setupToolbar();
 
-        canvas.style.touchAction = 'none';
-        
-        canvas.onpointerdown = handleDown;
-        canvas.onpointermove = handleMove;
-        canvas.onpointerup = handleUp;
+        canvasDynamic.onpointerdown = handleDown;
+        canvasDynamic.onpointermove = handleMove;
+        canvasDynamic.onpointerup = handleUp;
+        canvasDynamic.onpointerout = handleUp;
+        canvasDynamic.onpointercancel = handleUp;
     }
 
     function setupToolbar() {
@@ -66,21 +70,23 @@
     }
 
     function resizeCanvas() {
-        const wrap = canvas.parentElement;
-        canvas.width = wrap.clientWidth;
-        canvas.height = 450; 
+        const wrap = canvasDynamic.parentElement;
+        [canvasStatic, canvasDynamic].forEach(c => {
+            c.width = wrap.clientWidth;
+            c.height = 450; 
+        });
         redraw();
     }
 
     function getLocalCoords(e) {
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvasStatic.getBoundingClientRect();
         return { x: (e.clientX - rect.left), y: (e.clientY - rect.top) };
     }
 
     function handleDown(e) {
-        if (!rc || activePointerId !== null) return;
+        if (!rcStatic || activePointerId !== null) return;
         activePointerId = e.pointerId;
-        canvas.setPointerCapture(e.pointerId);
+        canvasDynamic.setPointerCapture(e.pointerId);
 
         isDrawing = true;
         const pos = getLocalCoords(e);
@@ -100,7 +106,7 @@
     }
 
     function handleMove(e) {
-        if (!isDrawing || !rc || e.pointerId !== activePointerId) return;
+        if (!isDrawing || !rcStatic || e.pointerId !== activePointerId) return;
         const pos = getLocalCoords(e);
         
         if (currentTool === 'eraser') {
@@ -111,8 +117,9 @@
             } else {
                 tempElement.points = [tempElement.points[0], [pos.x, pos.y]];
             }
-            redraw();
-            drawElement(tempElement);
+            // ⚡ Optimize
+            ctxDynamic.clearRect(0, 0, canvasDynamic.width, canvasDynamic.height);
+            drawElementInContext(rcDynamic, tempElement);
         }
     }
 
@@ -120,64 +127,66 @@
         if (isDrawing && tempElement && e.pointerId === activePointerId) {
             elements.push(tempElement);
             tempElement = null;
+            
+            ctxDynamic.clearRect(0, 0, canvasDynamic.width, canvasDynamic.height);
             redraw();
         }
         if (e.pointerId === activePointerId) {
             isDrawing = false;
             activePointerId = null;
-            canvas.releasePointerCapture(e.pointerId);
+            canvasDynamic.releasePointerCapture(e.pointerId);
         }
     }
 
     function redraw() {
-        if (!ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        elements.forEach(drawElement);
+        if (!ctxStatic) return;
+        ctxStatic.clearRect(0, 0, canvasStatic.width, canvasStatic.height);
+        elements.forEach(el => drawElementInContext(rcStatic, el));
     }
 
-    function drawElement(el) {
-        if (!rc) return;
+    function drawElementInContext(roughCanvas, el) {
+        if (!roughCanvas) return;
         const opts = { 
             stroke: el.stroke, 
             strokeWidth: el.strokeWidth, 
-            roughness: el.type === 'pen' ? 0.3 : 1,
+            roughness: (el.type === 'pen' || el.type === 'line') ? 0.3 : 1,
             seed: el.seed 
         };
         
         if (el.type === 'pen') {
-            rc.linearPath(el.points, opts);
+            roughCanvas.linearPath(el.points, opts);
         } else if (el.type === 'line') {
             const [p1, p2] = el.points;
-            rc.line(p1[0], p1[1], p2[0], p2[1], opts);
+            roughCanvas.line(p1[0], p1[1], p2[0], p2[1], opts);
         } else if (el.type === 'rectangle') {
             const [p1, p2] = el.points;
-            rc.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
+            roughCanvas.rectangle(Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.abs(p2[0] - p1[0]), Math.abs(p2[1] - p1[1]), opts);
         } else if (el.type === 'ellipse') {
             const [p1, p2] = el.points;
-            rc.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
+            roughCanvas.ellipse(p1[0] + (p2[0]-p1[0])/2, p1[1] + (p2[1]-p1[1])/2, Math.abs(p2[0]-p1[0]), Math.abs(p2[1]-p1[1]), opts);
         } else if (el.type === 'triangle') {
             const [p1, p2] = el.points;
             const x1 = Math.min(p1[0], p2[0]), x2 = Math.max(p1[0], p2[0]);
             const y1 = Math.min(p1[1], p2[1]), y2 = Math.max(p1[1], p2[1]);
-            rc.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
+            roughCanvas.polygon([[x1 + (x2 - x1) / 2, y1], [x1, y2], [x2, y2]], opts);
         } else if (el.type === 'graph') {
             const [p1, p2] = el.points;
-            const midX = (p1[0] + p2[0]) / 2;
-            const midY = (p1[1] + p2[1]) / 2;
-            rc.line(p1[0], midY, p2[0], midY, opts); // X
-            rc.line(midX, p1[1], midX, p2[1], opts); // Y
+            const midX = (p1[0] + p2[0]) / 2, midY = (p1[1] + p2[1]) / 2;
+            roughCanvas.line(p1[0], midY, p2[0], midY, opts); 
+            roughCanvas.line(midX, p1[1], midX, p2[1], opts); 
         } else if (el.type === 'arrow') {
             const [p1, p2] = el.points;
-            rc.line(p1[0], p1[1], p2[0], p2[1], opts);
-            // Arrow Head Logic
+            roughCanvas.line(p1[0], p1[1], p2[0], p2[1], opts);
             const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
             const headSize = Math.max(10, el.strokeWidth * 3);
             const x1 = p2[0] - headSize * Math.cos(angle - Math.PI / 6);
             const y1 = p2[1] - headSize * Math.sin(angle - Math.PI / 6);
             const x2 = p2[0] - headSize * Math.cos(angle + Math.PI / 6);
             const y2 = p2[1] - headSize * Math.sin(angle + Math.PI / 6);
-            rc.line(p2[0], p2[1], x1, y1, opts);
-            rc.line(p2[0], p2[1], x2, y2, opts);
+            roughCanvas.line(p2[0], p2[1], x1, y1, opts);
+            roughCanvas.line(p2[0], p2[1], x2, y2, opts);
+            roughCanvas.line(p2[0], p2[1], x1, y1, opts);
+            roughCanvas.line(p2[0], p2[1], x2, y2, opts);
         }
     }
 
