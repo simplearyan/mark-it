@@ -64,38 +64,8 @@
     style.id = styleId;
     style.textContent = `
       .iitm-annotation-toolbar { overflow-y: visible !important; }
-      .iitm-confirm-popover {
-        position: absolute !important;
-        bottom: calc(100% + 15px) !important;
-        right: 15px !important;
-        left: auto !important;
-        background: rgba(15, 23, 42, 0.98) !important;
-        backdrop-filter: blur(25px);
-        -webkit-backdrop-filter: blur(25px);
-        color: white !important;
-        padding: 10px 14px !important;
-        border-radius: 12px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 8px !important;
-        min-width: 140px !important;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
-        z-index: 2147483647 !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        transform: translateY(10px);
-        transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-        border: 1px solid rgba(255,255,255,0.15) !important;
-      }
-      .iitm-confirm-popover.active {
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        transform: translateY(0) !important;
-      }
-      .iitm-confirm-title { font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; }
-      .iitm-confirm-btn { flex: 1 !important; padding: 6px 0 !important; border-radius: 8px !important; font-size: 12px !important; }
-      .iitm-confirm-cancel { background: #334155 !important; color: white !important; }
-      .iitm-confirm-yes { background: #ef4444 !important; color: white !important; }
+      .iitm-annotation-toolbar { overflow-y: visible !important; }
+
     `;
     document.head.appendChild(style);
   }
@@ -236,17 +206,10 @@
       </div>
       <div class="iitm-divider"></div>
         <button class="iitm-tool-btn" id="iitm-pro-btn" title="Adaptive Pro Mode (60fps on Wikipedia)">🏝️</button>
-        <button class="iitm-tool-btn" id="iitm-clear-trigger" title="Clear All"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        <button class="iitm-tool-btn" id="iitm-clear-trigger" title="Reset All Annotations"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
         <button class="iitm-tool-btn" data-tool="close" title="Close"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>
       </div>
 
-      <div class="iitm-confirm-popover" id="iitm-clear-popover">
-        <div class="iitm-confirm-title">Clear all annotations?</div>
-        <div class="iitm-confirm-footer">
-          <button class="iitm-confirm-btn iitm-confirm-cancel" id="iitm-clear-no">Cancel</button>
-          <button class="iitm-confirm-btn iitm-confirm-yes" id="iitm-clear-yes">Yes, Clear</button>
-        </div>
-      </div>
     `;
 
     toolbar.onpointerdown = (e) => e.stopPropagation(); // 🚩 Don't draw when clicking toolbar
@@ -269,29 +232,16 @@
       } else if (weightBtn) {
         setWeight(parseInt(weightBtn.dataset.weight));
       } else if (clearBtn) {
-        showClearConfirm();
+        elements = []; saveAnnotations(); redraw();
       } else if (proBtn) {
         toggleProMode();
       }
     };
 
-    toolbar.querySelector('#iitm-clear-no').onclick = hideClearConfirm;
-    toolbar.querySelector('#iitm-clear-yes').onclick = () => {
-      elements = []; saveAnnotations(); redraw(); hideClearConfirm();
-    };
-
     document.body.appendChild(toolbar);
   }
 
-  function showClearConfirm() {
-    const popover = document.getElementById('iitm-clear-popover');
-    popover.classList.add('active');
-  }
 
-  function hideClearConfirm() {
-    const popover = document.getElementById('iitm-clear-popover');
-    if (popover) popover.classList.remove('active');
-  }
 
   function setTool(tool) {
     currentTool = tool;
