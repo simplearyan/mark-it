@@ -45,11 +45,12 @@
 
     if (typeof ResizeObserver !== 'undefined') {
       const resizeOb = new ResizeObserver(() => {
-         if (isEnabled && canvas) resizeCanvas();
+         if (isEnabled && canvasStatic) resizeCanvas();
       });
       resizeOb.observe(document.body);
       resizeOb.observe(document.documentElement);
     }
+
     
     // 🚩 Orientation Change support
     window.addEventListener('orientationchange', () => {
@@ -155,10 +156,14 @@
     canvasDynamic.onpointerout = handleUp;
     canvasDynamic.onpointercancel = handleUp;
 
+    // 🚩 Correct initial pointer-events
+    setTool(currentTool);
+
     window.addEventListener('scroll', () => {
       if (isEnabled && isProMode) requestAnimationFrame(redraw);
     }, { passive: true });
   }
+
 
   function toggleProMode() {
     isProMode = !isProMode;
@@ -246,8 +251,13 @@
   function setTool(tool) {
     currentTool = tool;
     toolbar.querySelectorAll('[data-tool]').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
-    canvas.style.cursor = tool === 'cursor' ? 'default' : 'crosshair';
+    
+    if (canvasDynamic) {
+        canvasDynamic.style.cursor = tool === 'cursor' ? 'default' : 'crosshair';
+        canvasDynamic.style.pointerEvents = tool === 'cursor' ? 'none' : 'auto';
+    }
   }
+
 
   function setColor(color) {
     currentColor = color;
